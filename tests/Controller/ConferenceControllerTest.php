@@ -3,6 +3,8 @@
 namespace App\Tests\Controller;
 
 use Symfony\Component\Panther\PantherTestCase;
+use App\Repository\CommentRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 class ConferenceControllerTest extends PantherTestCase
 {
@@ -37,10 +39,16 @@ class ConferenceControllerTest extends PantherTestCase
         $client->submitForm('Submit', [
             'comment_from[author]' => 'Fabien',
             'comment_from[text]' => 'Some feedback from an automated functional test',
-            'comment_from[email]' => 'me@automat.ed',
+            'comment_from[email]' => $email = 'me@automat.ed',
             'comment_from[photo]' => dirname(__DIR__, 2).'/public/images/under-construction.gif',
         ]);
         $this->assertResponseRedirects();
+
+        // simulate comment validation
+        $comment = self::$container->get(CommentRepository::class)->findOneByEmail($email);
+        $comment->setState('published');
+        self::$container->get(EntityManagerInterface::class)->flush();
+
         $client->followRedirect();
         $this->assertSelectorExists('div:contains("There are 2 comments")');
     }
